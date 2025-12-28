@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XelCore • Mark XII — Singularity Collapse</title>
+    <title>XelCore • Mark XII — Singularity Collapse (Command Array Edition)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <style>
-        :root { --cyan: #00f3ff; --magenta: #ff00ff; --red: #ff3c00; --bg: #000002; }
+        :root { --cyan: #00f3ff; --magenta: #ff00ff; --red: #ff3c00; --bg: #000002; --glass: rgba(0, 243, 255, 0.05); }
         body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Orbitron', 'Segoe UI', sans-serif; cursor: none; color: white; }
         
         #hud-top {
@@ -29,18 +29,44 @@
         .stat-value { font-size: 1.8rem; font-weight: 900; color: var(--cyan); text-shadow: 0 0 15px var(--cyan); }
         .stat-label { font-size: 0.7rem; opacity: 0.7; display: block; }
 
+        /* PANEL DE COMANDOS ESTÁTICO (DOCK) */
+        #command-dock {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; z-index: 150;
+        }
+
+        .xel-btn {
+            width: 180px; height: 50px;
+            background: var(--glass);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            display: flex; align-items: center; justify-content: center;
+            text-transform: uppercase; letter-spacing: 2px; font-weight: 800;
+            font-size: 0.7rem; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+        }
+
+        .xel-btn.hover-active {
+            background: rgba(0, 243, 255, 0.25);
+            box-shadow: 0 0 25px var(--cyan), inset 0 0 15px var(--cyan);
+            color: #ffffff;
+            transform: translateY(-5px) scale(1.05);
+            border-width: 2px;
+        }
+
         #reticle {
             position: absolute; width: 50px; height: 50px;
             border: 1px solid var(--cyan); transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 100;
+            pointer-events: none; z-index: 200;
             display: flex; align-items: center; justify-content: center;
             transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #reticle::before, #reticle::after {
-            content: ''; position: absolute; width: 10px; height: 10px; border: 1px solid var(--cyan);
+            content: ''; position: absolute; width: 100%; height: 100%; border: 1px solid transparent;
         }
-        #reticle::before { top: -5px; left: -5px; border-right: none; border-bottom: none; }
-        #reticle::after { bottom: -5px; right: -5px; border-left: none; border-top: none; }
+        #reticle::before { width: 10px; height: 10px; top: -5px; left: -5px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+        #reticle::after { width: 10px; height: 10px; bottom: -5px; right: -5px; border-bottom: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
         
         #reticle.fist { width: 70px; height: 70px; border-color: var(--red); box-shadow: 0 0 30px var(--red); }
         #reticle.fist::before, #reticle.fist::after { border-color: var(--red); }
@@ -48,7 +74,7 @@
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 200; background: rgba(0,0,0,0.9); transition: opacity 0.5s;
+            z-index: 210; background: rgba(0,0,0,0.9); transition: opacity 0.5s;
         }
 
         .btn-core {
@@ -60,16 +86,16 @@
         .btn-core:hover { background: var(--cyan); color: black; box-shadow: 0 0 50px var(--cyan); }
 
         #combo-msg {
-            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 25%; left: 50%; transform: translateX(-50%);
             font-size: 4rem; font-weight: 900; color: var(--magenta);
             text-shadow: 0 0 20px var(--magenta); pointer-events: none;
-            opacity: 0; transition: opacity 0.2s;
+            opacity: 0; transition: opacity 0.2s; z-index: 50;
         }
 
         #video-preview {
             position: absolute; bottom: 30px; left: 30px; width: 160px;
             border: 1px solid var(--cyan); opacity: 0.4; transform: scaleX(-1);
-            border-radius: 10px; overflow: hidden;
+            border-radius: 10px; overflow: hidden; z-index: 5;
         }
         video { width: 100%; }
     </style>
@@ -96,22 +122,29 @@
     <div style="max-width: 500px; text-align: center; font-size: 0.9rem; margin-top: 20px; line-height: 1.6; opacity: 0.8;">
         Control táctico detectado. <br>
         Palma abierta para navegar la singularidad. <br>
-        Pulso de puño para fragmentar anomalías.
+        Pulso de puño para fragmentar anomalías o activar comandos.
     </div>
     <button class="btn-core" id="init-btn">ESTABLECER VÍNCULO</button>
+</div>
+
+<!-- DOCK DE COMANDOS ESTÁTICO -->
+<div id="command-dock">
+    <div class="xel-btn" data-url="https://lafldsrmdfr39-ax.github.io/void-defender/">Void Defender</div>
+    <div class="xel-btn" data-url="https://lafldsrmdfr39-ax.github.io/celestial-pivot/">Celestial Pivot</div>
+    <div class="xel-btn" data-url="https://lafldsrmdfr39-ax.github.io/neural-keyboard/">Neural Keyboard</div>
+    <div class="xel-btn" data-url="https://lafldsrmdfr39-ax.github.io/nexus/">Nexus Core</div>
 </div>
 
 <div id="video-preview"><video id="input_video"></video></div>
 <canvas id="stage"></canvas>
 
 <script>
-    /** XELCORE MK-XII: SINGULARITY COLLAPSE - ENGINE **/
+    /** XELCORE MK-XII: SINGULARITY COLLAPSE - ENGINE + COMMAND ARRAY **/
     
     let active = false;
     let stats = { score: 0, health: 100, level: 1, combo: 0 };
     const config = { speed: 0.8, spawnRate: 0.04 };
 
-    // --- THREE.JS: NÚCLEO GRÁFICO ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000002, 0.015);
     
@@ -120,12 +153,10 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    // Iluminación Dinámica
     const mainLight = new THREE.PointLight(0x00f3ff, 5, 50);
     scene.add(mainLight);
     scene.add(new THREE.AmbientLight(0x101020, 1));
 
-    // Nave del Jugador (Diseño Geométrico Avanzado)
     const shipGroup = new THREE.Group();
     const bodyGeo = new THREE.ConeGeometry(0.8, 3, 3);
     const bodyMat = new THREE.MeshPhongMaterial({ color: 0x00f3ff, wireframe: true, emissive: 0x00f3ff, emissiveIntensity: 0.5 });
@@ -140,7 +171,6 @@
     
     scene.add(shipGroup);
 
-    // Entorno: Túnel Infinito
     const tunnelGeo = new THREE.CylinderGeometry(40, 40, 500, 32, 20, true);
     const tunnelMat = new THREE.MeshPhongMaterial({ color: 0x002233, wireframe: true, side: THREE.BackSide, transparent: true, opacity: 0.2 });
     const tunnel = new THREE.Mesh(tunnelGeo, tunnelMat);
@@ -151,7 +181,7 @@
 
     function createExplosion(pos, color = 0x00f3ff) {
         for(let i=0; i<20; i++) {
-            const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshBasicMaterial({color: color}));
+            const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshBasicMaterial({color: color, transparent: true}));
             p.position.copy(pos);
             p.userData = { 
                 v: new THREE.Vector3((Math.random()-0.5)*0.8, (Math.random()-0.5)*0.8, (Math.random()-0.5)*0.8),
@@ -179,39 +209,30 @@
     }
 
     function fire() {
-        // GEOMETRÍA DEL PROYECTIL
         const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2, 8), new THREE.MeshBasicMaterial({color: 0xffffff}));
-        
-        // ORIGEN: Ligeramente debajo de la perspectiva de la cámara (Efecto Cockpit)
         const origin = new THREE.Vector3(shipGroup.position.x, shipGroup.position.y - 4, camera.position.z - 2);
         b.position.copy(origin);
-        
-        // OBJETIVO: Donde la nave (retícula) está apuntando actualmente en el plano Z=0, pero proyectado al fondo
         const target = new THREE.Vector3(shipGroup.position.x, shipGroup.position.y, -200);
-        
-        // CÁLCULO DE TRAYECTORIA CONVERGENTE
         const direction = new THREE.Vector3().subVectors(target, origin).normalize();
-        b.userData.velocity = direction.multiplyScalar(5); // Velocidad del pulso
-        
-        // ALINEAR EL PROYECTIL CON LA DIRECCIÓN
+        b.userData.velocity = direction.multiplyScalar(5);
         b.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-
         scene.add(b);
         objects.bullets.push(b);
         
-        // Audio Synth táctico
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'square';
-        o.frequency.setValueAtTime(523, ctx.currentTime);
-        o.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
-        g.gain.setValueAtTime(0.04, ctx.currentTime);
-        o.connect(g); g.connect(ctx.destination);
-        o.start(); o.stop(ctx.currentTime + 0.1);
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'square';
+            o.frequency.setValueAtTime(523, ctx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+            g.gain.setValueAtTime(0.04, ctx.currentTime);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(); o.stop(ctx.currentTime + 0.1);
+        } catch(e) {}
     }
 
-    // --- VISION ENGINE (MEDIAPIPE) ---
+    // --- VISION ENGINE ---
     const handState = { x: 0, y: 0, isFist: false, active: false };
     const smoothPos = { x: 0, y: 0 };
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
@@ -236,95 +257,119 @@
 
     // --- LOOP DE JUEGO ---
     let lastFire = 0;
+    let lastFistState = false;
+    const commandBtns = document.querySelectorAll('.xel-btn');
 
     function animate() {
         requestAnimationFrame(animate);
         
-        if (!active) {
-            renderer.render(scene, camera);
-            return;
-        }
-
-        // Navegación y Apuntado
         if (handState.active) {
             smoothPos.x += (handState.x - smoothPos.x) * 0.12;
             smoothPos.y += (handState.y - smoothPos.y) * 0.12;
-            shipGroup.position.set(smoothPos.x, smoothPos.y, 0);
             
-            // Inclinación dinámica de la nave
-            shipGroup.rotation.z = (smoothPos.x / 60) * 1.2;
-            shipGroup.rotation.y = -(smoothPos.x / 60) * 0.5;
-            
-            mainLight.position.set(smoothPos.x, smoothPos.y, 5);
+            // Coordenadas de pantalla para la retícula
+            const retX = (1 - (handState.x / -120 + 0.5)) * window.innerWidth;
+            const retY = (handState.y / -80 + 0.5) * window.innerHeight;
 
             const ret = document.getElementById('reticle');
-            ret.style.left = `${(1 - (handState.x / -120 + 0.5)) * window.innerWidth}px`;
-            ret.style.top = `${(handState.y / -80 + 0.5) * window.innerHeight}px`;
+            ret.style.left = `${retX}px`;
+            ret.style.top = `${retY}px`;
             ret.className = handState.isFist ? 'fist' : '';
 
-            if (handState.isFist && Date.now() - lastFire > 180) {
-                fire();
-                lastFire = Date.now();
-            }
-        }
+            // --- LÓGICA DE INTERACCIÓN CON EL DOCK (COMMAND ARRAY) ---
+            let onDockButton = false;
+            commandBtns.forEach(btn => {
+                const rect = btn.getBoundingClientRect();
+                if (retX > rect.left && retX < rect.right && 
+                    retY > rect.top && retY < rect.bottom) {
+                    
+                    onDockButton = true;
+                    btn.classList.add('hover-active');
 
-        // Proyectiles con trayectoria vectorial
-        for (let i = objects.bullets.length - 1; i >= 0; i--) {
-            const b = objects.bullets[i];
-            b.position.add(b.userData.velocity);
-            if (b.position.z < -250) { scene.remove(b); objects.bullets.splice(i, 1); }
-        }
-
-        // Enemigos
-        if (Math.random() < config.spawnRate) spawnEnemy();
-        for (let i = objects.enemies.length - 1; i >= 0; i--) {
-            const e = objects.enemies[i];
-            e.position.z += config.speed + (stats.level * 0.2);
-            e.rotation.x += e.userData.rot;
-            
-            // Colisión con balas tácticas
-            objects.bullets.forEach((b, bi) => {
-                if (b.position.distanceTo(e.position) < 2.8) {
-                    createExplosion(e.position, e.userData.type === 'boss' ? 0xff00ff : 0xff3c00);
-                    scene.remove(e); objects.enemies.splice(i, 1);
-                    scene.remove(b); objects.bullets.splice(bi, 1);
-                    stats.score += e.userData.type === 'boss' ? 500 : 100;
-                    stats.combo++;
-                    if(stats.combo > 10) {
-                        document.getElementById('combo-msg').style.opacity = 1;
-                        setTimeout(() => document.getElementById('combo-msg').style.opacity = 0, 1000);
+                    if (handState.isFist && !lastFistState) {
+                        window.open(btn.dataset.url, '_blank');
+                        lastFistState = true;
                     }
-                    if(stats.score % 3000 === 0) stats.level++;
+                } else {
+                    btn.classList.remove('hover-active');
                 }
             });
 
-            // Colisión con estructura del jugador
-            if (e && e.position.distanceTo(shipGroup.position) < 2.5) {
-                stats.health -= 15;
-                stats.combo = 0;
-                createExplosion(shipGroup.position, 0xffffff);
-                scene.remove(e); objects.enemies.splice(i, 1);
-                if (stats.health <= 0) endGame();
+            // --- ACCIÓN DE JUEGO ---
+            if (active) {
+                shipGroup.position.set(smoothPos.x, smoothPos.y, 0);
+                shipGroup.rotation.z = (smoothPos.x / 60) * 1.2;
+                shipGroup.rotation.y = -(smoothPos.x / 60) * 0.5;
+                mainLight.position.set(smoothPos.x, smoothPos.y, 5);
+
+                // Disparo (Solo si no estamos sobre el dock)
+                if (!onDockButton && handState.isFist && Date.now() - lastFire > 180) {
+                    fire();
+                    lastFire = Date.now();
+                }
             }
 
-            if (e && e.position.z > 20) { scene.remove(e); objects.enemies.splice(i, 1); }
+            if (!handState.isFist) lastFistState = false;
         }
 
-        // Partículas
-        for (let i = objects.particles.length - 1; i >= 0; i--) {
-            const p = objects.particles[i];
-            p.position.add(p.userData.v);
-            p.userData.life -= 0.02;
-            p.material.opacity = p.userData.life;
-            if (p.userData.life <= 0) { scene.remove(p); objects.particles.splice(i, 1); }
+        if (active) {
+            // Actualización de proyectiles
+            for (let i = objects.bullets.length - 1; i >= 0; i--) {
+                const b = objects.bullets[i];
+                b.position.add(b.userData.velocity);
+                if (b.position.z < -250) { scene.remove(b); objects.bullets.splice(i, 1); }
+            }
+
+            // Enemigos
+            if (Math.random() < config.spawnRate) spawnEnemy();
+            for (let i = objects.enemies.length - 1; i >= 0; i--) {
+                const e = objects.enemies[i];
+                e.position.z += config.speed + (stats.level * 0.2);
+                e.rotation.x += e.userData.rot;
+                
+                // Colisión proyectiles
+                objects.bullets.forEach((b, bi) => {
+                    if (b.position.distanceTo(e.position) < 2.8) {
+                        createExplosion(e.position, e.userData.type === 'boss' ? 0xff00ff : 0xff3c00);
+                        scene.remove(e); objects.enemies.splice(i, 1);
+                        scene.remove(b); objects.bullets.splice(bi, 1);
+                        stats.score += e.userData.type === 'boss' ? 500 : 100;
+                        stats.combo++;
+                        if(stats.combo > 10) {
+                            document.getElementById('combo-msg').style.opacity = 1;
+                            setTimeout(() => document.getElementById('combo-msg').style.opacity = 0, 1000);
+                        }
+                        if(stats.score > 0 && stats.score % 3000 === 0) stats.level++;
+                    }
+                });
+
+                // Colisión nave
+                if (e && e.position.distanceTo(shipGroup.position) < 2.5) {
+                    stats.health -= 15;
+                    stats.combo = 0;
+                    createExplosion(shipGroup.position, 0xffffff);
+                    scene.remove(e); objects.enemies.splice(i, 1);
+                    if (stats.health <= 0) endGame();
+                }
+
+                if (e && e.position.z > 20) { scene.remove(e); objects.enemies.splice(i, 1); }
+            }
+
+            // Partículas
+            for (let i = objects.particles.length - 1; i >= 0; i--) {
+                const p = objects.particles[i];
+                p.position.add(p.userData.v);
+                p.userData.life -= 0.02;
+                p.material.opacity = p.userData.life;
+                if (p.userData.life <= 0) { scene.remove(p); objects.particles.splice(i, 1); }
+            }
+
+            tunnel.rotation.y += 0.002;
+            tunnel.position.z = (tunnel.position.z + 2) % 100;
+
+            document.getElementById('score').innerText = stats.score.toString().padStart(5, '0');
+            document.getElementById('health').innerText = Math.max(0, stats.health) + "%";
         }
-
-        // Renderizado del Vacío
-        tunnel.rotation.y += 0.002;
-        tunnel.position.z = (tunnel.position.z + 2) % 100;
-
-        document.getElementById('score').innerText = stats.score.toString().padStart(5, '0');
-        document.getElementById('health').innerText = Math.max(0, stats.health) + "%";
 
         camera.position.z = 20;
         renderer.render(scene, camera);
